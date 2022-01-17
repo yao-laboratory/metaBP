@@ -168,7 +168,7 @@ def find_mutations(clusName, cluster, sim_threshold, outputfile):
                                 "" + str(x + 1) + main_seq[x] + ","
                             )
             additional_info += mutation_info
-        mutations.append(additional_info)
+        mutations.append(additional_info[:-1])
     # write the new information to the output file
     # first write the cluster name and main sequence:
     outputfile.write(clusName)
