@@ -4,6 +4,29 @@ import argparse
 import pandas as pd
 import numpy as np
 
+def pre_process(read_file_1, read_file_2):
+    bbmap_folder = "bbmap/bbmap"
+    adapters = bbmap_folder+"/resources/adapters.fa"
+    phiX_adapters=bbmap_folder+"/resources/phix174_ill.ref.fa.gz"
+    temp1 = "temp1.fq"
+    temp2 = "temp2.fq"
+    
+    os.system("mkdir sequencing_reads")
+    command1 = "{}/bbduk.sh -Xmx7g in1={} in2={} out1={} out2={} minlen=10 qtrim=rl trimq=20 ktrim=r k=21 mink=11 ref={} hdist=1 threads=2 tbo tpe".format(bbmap_folder, read_file_1, read_file_2, temp1, temp2, adapters)
+    os.system(command1)
+    
+    filename1 = (read_file_1.split("/")[-1]).split(".")
+    output1 = "sequencing_reads/"+filename1[0]+"_filtered.fastq"
+    filename2 = (read_file_2.split("/")[-1]).split(".")
+    output2= "sequencing_reads/"+filename2[0]+"_filtered.fastq"
+    command2 = "{}/bbduk.sh in1={} in2={} out1={} out2={} ref={} hdist=1 k=21 threads=2".format(bbmap_folder, temp1, temp2, output1, output2, phiX_adapters)
+    os.system(command2)
+    
+    os.system("rm "+temp1+" "+temp2)
+    
+    
+    return output1, output2
+
 def isolate_clusters(cluster_fp):
     cluster_file = open(cluster_fp, "r+")
     file_data = []
@@ -206,34 +229,65 @@ def format_clusters(clusters_fp):
     return new_clus_fp
     
     
-def annotation_pipeline(read_file_1, read_file_2, seq_file_path, output_fp, plass_bypass_flag=False, mutation_id_window=10):
+def annotation_pipeline(
+    read_file_1,
+    read_file_2,
+    seq_file_path,
+    output_fp,
+    clust_type,
+    mutation_id_window=10,
+):
+    # also add a parameter to choose whether you use eggnog or the new model
+    # only run short proteins through the annotation tools
+    # big csv file as output and then short report file to summarize the results
+    # could add a preprocessing step to clean up the fastq file (there's a tool that can be provided along with the others)
+    # print extra information (date, time, what procedure is running and then the same when it's finished)
     os.system("mkdir results")
     prots_fp = ""
-    if plass_bypass_flag == False:
+    if (read_file_1 is not None) and (read_file_2 is not None):
+        # filter data
+        filtered_read1, filtered_read2 = pre_process(read_file_1, read_file_2)
         # run plass
-        plass_string = "plass/bin/plass assemble " +read_file_1+ " " +read_file_2+ " results/assembly.fas ./tmp --min-seq-id 0.8 >/dev/null 2>&1"
+        plass_string = (
+            "plass/bin/plass assemble "
+            + filtered_read1
+            + " "
+            + filtered_read2
+            + " results/assembly.fas ./tmp --min-seq-id 0.8 >/dev/null 2>&1"
+        )
         print("Running Plass")
         os.system(plass_string)
         prots_fp = "results/assembly.fas"
     elif seq_file_path is not None:
         prots_fp = seq_file_path
+    else:
+        print("Error locating input files, please try again.")
+
+    clusters_fp = ""
+    if clust_type == 0:
+        # run linclust
+        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " results/clusters ./tmp --min-seq-id 0.9 >/dev/null 2>&1"
+        print("Running Linclust")
+        os.system(linclust_str)
+        clusters_fp = "results/clusters_all_seqs.fasta"
+    elif clust_type == 1:
+        # create csv file of protein sequences to pass in to RBiotools
+        seq_csv = make_prot_df(prots_fp)
+        # then call R code
+        os.system("Rscript get_clusters.r >/dev/null 2>&1")
+        print("Running Linclust with RBiotools")
+        # identify mutations in clusters
+        clusters_fp = format_clusters("results/clusters.csv")
+    else:
+        print("Error choosing correct version of Linclsut, please try again.")
     
-    # create csv file of protein sequences to pass in to RBiotools
-    seq_csv = make_prot_df(prots_fp)
-    # then call R code
-    os.system("Rscript get_clusters.r >/dev/null 2>&1")
-    print("Running Linclust")
-    
-  
-    # identify mutations in clusters
-    clusters_fp = format_clusters("results/clusters.csv")
     # isolate clusters with short proteins
     clusters_short_prots = isolate_short_prots(clusters_fp)
     output_fp = "results/mutations.txt"
     print("Identifying mutations")
     mutation_id.id_mutations(clusters_short_prots, output_fp, mutation_id_window)
-    
-    #insert ML model steps here
+
+    # insert ML model steps here
 
     
 def main():
