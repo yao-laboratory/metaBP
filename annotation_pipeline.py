@@ -3,6 +3,7 @@ import mutation_id
 import argparse
 import pandas as pd
 import numpy as np
+import datetime
 
 def pre_process(read_file_1, read_file_2):
     bbmap_folder = "bbmap/bbmap"
@@ -255,8 +256,9 @@ def annotation_pipeline(
             + filtered_read2
             + " results/assembly.fas ./tmp --min-seq-id 0.8 >/dev/null 2>&1"
         )
-        print("Running Plass")
+        print(datetime.datetime.now(), ": Running PLASS")
         os.system(plass_string)
+        print(datetime.datetime.now(), ": PLASS assembly completed")
         prots_fp = "results/assembly.fas"
     elif seq_file_path is not None:
         prots_fp = seq_file_path
@@ -267,61 +269,109 @@ def annotation_pipeline(
     if clust_type == 0:
         # run linclust
         linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " results/clusters ./tmp --min-seq-id 0.9 >/dev/null 2>&1"
-        print("Running Linclust")
+        print(datetime.datetime.now(), ": Running Linclust")
         os.system(linclust_str)
+        print(datetime.datetime.now(), ": Protein clustering complete")
         clusters_fp = "results/clusters_all_seqs.fasta"
     elif clust_type == 1:
+        print(datetime.datetime.now(), ": Running RBiotools Linclust")
         # create csv file of protein sequences to pass in to RBiotools
         seq_csv = make_prot_df(prots_fp)
         # then call R code
         os.system("Rscript get_clusters.r >/dev/null 2>&1")
-        print("Running Linclust with RBiotools")
         # identify mutations in clusters
         clusters_fp = format_clusters("results/clusters.csv")
+        print(datetime.datetime.now(), ": Protein clustering complete")
+
     else:
         print("Error choosing correct version of Linclsut, please try again.")
     
     # isolate clusters with short proteins
+    print(datetime.datetime.now(), ": Isolating short proteins")
     clusters_short_prots = isolate_short_prots(clusters_fp)
+    print(datetime.datetime.now(), ": Short protein isolation complete")
     output_fp = "results/mutations.txt"
-    print("Identifying mutations")
+    print(datetime.datetime.now(), ": Identifying mutations")
     mutation_id.id_mutations(clusters_short_prots, output_fp, mutation_id_window)
-
+    print(datetime.datetime.now(), ": Mutation identification complete")
     # insert ML model steps here
 
     
 def main():
-    parser = argparse.ArgumentParser(prog="protein_based_annotation_pipeline",description="this method executes the mutation identification and annotation pipeline.")
-    subparser = parser.add_subparsers(dest="method",help="enter the the filepaths for the sequence read files and the name for the output file.")
+    parser = argparse.ArgumentParser(
+        prog="protein_based_annotation_pipeline",
+        description="this method executes the mutation identification and annotation pipeline.",
+    )
+    subparser = parser.add_subparsers(
+        dest="method",
+        help="enter the the filepaths for the sequence read files and the name for the output file.",
+    )
+
+    mutation_id_parser = subparser.add_parser(
+        "call_mutations",
+        help="this method takes in sequence read data and returns mutation and annotation information for the sequences.",
+    )
+    mutation_id_parser.add_argument(
+        "-i1",
+        dest="read_file_1",
+        type=str,
+        help="the file path of the first sequence read file (.fastq.gz) to use in paired-end assembly",
+    )
+    mutation_id_parser.add_argument(
+        "-i2",
+        dest="read_file_2",
+        type=str,
+        help="the file path of the second sequence read file (.fastq.gz) to use in paired-end assembly",
+    )
+    mutation_id_parser.add_argument(
+        "-s",
+        dest="seq_file_path",
+        type=str,
+        help="the file path of the .fasta file of sequences if plass is to be bypassed",
+    )
+    mutation_id_parser.add_argument(
+        "-o", dest="output_file_path", type=str, help="file path for the output file"
+    )
+    mutation_id_parser.add_argument(
+        "-clust", dest="clust_type", type=int, help="the version of linclust used for clustering. 0 for the original Linclust, 1 for the RBiotools Linclust"
+    )
     
-    mutation_id_parser = subparser.add_parser("call_mutations",help="this method takes in sequence read data and returns mutation and annotation information for the sequences.")
-    mutation_id_parser.add_argument("-i1", dest="read_file_1", type=str, help="the file path of the first sequence read file (.fastq.gz) to use in paired-end assembly")
-    mutation_id_parser.add_argument("-i2", dest="read_file_2", type=str, help="the file path of the second sequence read file (.fastq.gz) to use in paired-end assembly")
-    mutation_id_parser.add_argument("-s", dest="seq_file_path", type=str, help="the file path of the .fasta file of sequences if plass is to be bypassed")
-    mutation_id_parser.add_argument("-o", dest="output_file_path", type=str, help="file path for the output file")
-    mutation_id_parser.add_argument("-pbf",dest="plass_bypass_flag", type=int, help="0 if you would like to assemble your sequences using plass, 1 if you have pre-assembled sequences")
-    mutation_id_parser.add_argument("-mw",dest="mutation_id_window", type=int, help="the window on either side of a detected mutation within which to check that the similarity threshold (90%) is met. Default=10")
-    
-    cl = "call_mutations -i1 $WORK/protein_analysis/sequencing_reads/reads_1.fastq.gz -i2 $WORK/protein_analysis/sequencing_reads/reads_2.fastq.gz -o assembly.fas -pbf 0 -mw 10"
+    mutation_id_parser.add_argument(
+        "-mw",
+        dest="mutation_id_window",
+        type=int,
+        help="the window on either side of a detected mutation within which to check that the similarity threshold (90%) is met. Default=10",
+    )
+
+    cl = "call_mutations -i1 $WORK/protein_analysis/sequencing_reads/reads_1.fastq.gz -i2 $WORK/protein_analysis/sequencing_reads/reads_2.fastq.gz -o assembly.fas -clust 0 -mw 10"
     cl = cl.split()
-    print(cl)
     arguments = parser.parse_args(cl)
-    
+
     if arguments.method == "call_mutations":
         read_file_1 = arguments.read_file_1
         read_file_2 = arguments.read_file_2
         seq_file_path = arguments.seq_file_path
         output_file_path = arguments.output_file_path
-        pbf = arguments.plass_bypass_flag
-        plass_bypass_flag = False
-        if pbf == 1:
-            plass_bypass_flag = True
-        print(plass_bypass_flag)
+        clust_type = arguments.clust_type
         mutation_id_window = arguments.mutation_id_window
-        #call function
-        annotation_pipeline(read_file_1, read_file_2, seq_file_path, output_file_path, plass_bypass_flag, mutation_id_window)
-        print(read_file_1, read_file_2, seq_file_path, output_file_path, plass_bypass_flag, mutation_id_window) 
-    else: 
+        # call function
+        annotation_pipeline(
+            read_file_1,
+            read_file_2,
+            seq_file_path,
+            output_file_path,
+            clust_type,
+            mutation_id_window,
+        )
+        print(
+            read_file_1,
+            read_file_2,
+            seq_file_path,
+            output_file_path,
+            clust_type,
+            mutation_id_window,
+        )
+    else:
         print("Incorrect input, please check parameters and try again")
        
     
