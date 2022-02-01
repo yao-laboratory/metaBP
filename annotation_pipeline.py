@@ -343,9 +343,7 @@ def main():
         help="the window on either side of a detected mutation within which to check that the similarity threshold (90%) is met. Default=10",
     )
 
-    cl = "call_mutations -i1 $WORK/protein_analysis/sequencing_reads/reads_1.fastq.gz -i2 $WORK/protein_analysis/sequencing_reads/reads_2.fastq.gz -o assembly.fas -clust 0 -mw 10"
-    cl = cl.split()
-    arguments = parser.parse_args(cl)
+    arguments = parser.parse_args()
 
     if arguments.method == "call_mutations":
         read_file_1 = arguments.read_file_1
@@ -356,14 +354,6 @@ def main():
         mutation_id_window = arguments.mutation_id_window
         # call function
         annotation_pipeline(
-            read_file_1,
-            read_file_2,
-            seq_file_path,
-            output_file_path,
-            clust_type,
-            mutation_id_window,
-        )
-        print(
             read_file_1,
             read_file_2,
             seq_file_path,
