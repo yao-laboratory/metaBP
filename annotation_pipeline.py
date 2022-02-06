@@ -1,8 +1,8 @@
+import argparse
 import os
 import mutation_id
-import argparse
-import pandas as pd
 import numpy as np
+import pandas as pd
 import datetime
 
 def pre_process(read_file_1, read_file_2):
@@ -48,7 +48,7 @@ def isolate_clusters(cluster_fp):
                 i = i + 1
                 next = file_data[i]
                 next_split = next.split(" ")
-                if i == (len(file_data)-1):
+                if i == (len(file_data) - 1):
                     cluster.append(next)
                     in_cluster = False
                     clusters[clusName] = cluster
@@ -60,8 +60,7 @@ def isolate_clusters(cluster_fp):
                     cluster.append(next)
     return clusters
 
-
-def isolate_short_prots(clusters_fp):
+def isolate_short_prots(clusters_fp, output_fp):
     clusters = isolate_clusters(clusters_fp)
     fragments = {}
 
@@ -92,9 +91,9 @@ def isolate_short_prots(clusters_fp):
                 cluster.pop(ind - 1)
 
     # now rewrite the clusters file, along with the fragments file and long protein file
-    fragments_fp = "results/fragments.fasta"
-    long_prots_fp = "results/long_proteins.fasta"
-    short_prot_clusters_fp = "results/clusters_short_prots.fasta"
+    fragments_fp = output_fp+"/fragments.fasta"
+    long_prots_fp = output_fp+"/long_proteins.fasta"
+    short_prot_clusters_fp = output_fp+"/clusters_short_prots.fasta"
     fragment_file = open(fragments_fp, "w+")
     long_prots_file = open(long_prots_fp, "w+")
     cluster_file = open(short_prot_clusters_fp, "w+")
@@ -134,7 +133,9 @@ def scrub_file_data(file_data):
             k = file_data[i].replace("\n", "")
             scrubbed_file_data.append(k)
         else:
-            scrubbed_file_data.append(file_data[i])  # this works but the sequence is still split
+            scrubbed_file_data.append(
+                file_data[i]
+            )  # this works but the sequence is still split
     sequence_info = []
     consolidated_sequences = []
     sequence_info.append(scrubbed_file_data[0])
@@ -167,7 +168,7 @@ def scrub_file_data(file_data):
 
 def make_prot_df(short_prots_fp):
     prot_file = open(short_prots_fp, "r+")
-    
+
     file_data = []
     for i in prot_file:
         file_data.append(i)
@@ -177,59 +178,61 @@ def make_prot_df(short_prots_fp):
         if file_data[i].startswith(">"):
             info = file_data[i].split(" ")
             prot_id = info[0]
-            proteins[prot_id] = file_data[i+1]
-    
+            proteins[prot_id] = file_data[i + 1]
+
     seqs = []
     for k in proteins.keys():
         seqs.append(proteins[k])
-   
+
     acc = ["x"] * len(proteins)
     prot_df = pd.DataFrame()
     prot_df["accession"] = acc
     prot_df["identifier"] = proteins.keys()
     prot_df["protein"] = seqs
-    
-    csv_fp = "results/sequences.csv"
+
+    csv_fp = "tmp/sequences.csv"
     prot_df.to_csv(csv_fp)
     return csv_fp
 
-def format_clusters(clusters_fp):
-    new_clus_fp = "results/clusters_all_seqs.fasta"
+def format_clusters(clusters_fp, output_fp):
+    new_clus_fp = output_fp+"/clusters_all_seqs.fasta"
     new_clus = open(new_clus_fp, "w+")
     clus_df = pd.read_csv(clusters_fp)
-    clus_df = clus_df[["seqId", "identifier", "protein", "length", "repseq", "groupNum"]]
+    clus_df = clus_df[
+        ["seqId", "identifier", "protein", "length", "repseq", "groupNum"]
+    ]
     clusters = {}
-    clus_df = clus_df.sort_values(by = "groupNum", ascending=True)
-    
+    clus_df = clus_df.sort_values(by="groupNum", ascending=True)
+
     groups = clus_df["groupNum"].reset_index()
     rep_seqs = clus_df["repseq"].reset_index()
     rep_seqs = rep_seqs[rep_seqs["repseq"] == True]
-    
+
     repseq = []
     for i in rep_seqs["index"]:
         repseq.append([clus_df["identifier"][i], clus_df["groupNum"][i]])
-    
+
     for i in repseq:
         group = i[1]
-        clusters[group] = clus_df[clus_df["groupNum"] == group].sort_values(by = "repseq", ascending = False)
-    
-    
+        clusters[group] = clus_df[clus_df["groupNum"] == group].sort_values(
+            by="repseq", ascending=False
+        )
+
     for i in clusters.keys():
         cluster = clusters[i]
         rep = cluster[cluster["repseq"] == True]
-        #change these to write later
+        # change these to write later
         clus_str = rep["identifier"].item() + "\n"
         new_clus.write(clus_str)
         for index, row in cluster.iterrows():
-            seq_info = ""+ row["identifier"]+ " len:"+str(row["length"]) + "\n"
+            seq_info = "" + row["identifier"] + " len:" + str(row["length"]) + "\n"
             prot = row["protein"]
             new_clus.write(seq_info)
             new_clus.write(prot)
-    
+
     new_clus.close()
     return new_clus_fp
-    
-    
+
 def annotation_pipeline(
     read_file_1,
     read_file_2,
@@ -243,23 +246,26 @@ def annotation_pipeline(
     # big csv file as output and then short report file to summarize the results
     # could add a preprocessing step to clean up the fastq file (there's a tool that can be provided along with the others)
     # print extra information (date, time, what procedure is running and then the same when it's finished)
-    os.system("mkdir results")
+    os.system("mkdir tmp")
+    os.system("mkdir "+output_fp)
     prots_fp = ""
     if (read_file_1 is not None) and (read_file_2 is not None):
         # filter data
+        print(datetime.datetime.now(), ": Filtering sequencing read data")
         filtered_read1, filtered_read2 = pre_process(read_file_1, read_file_2)
+        print(datetime.datetime.now(), ": Filtering completed")
         # run plass
         plass_string = (
             "plass/bin/plass assemble "
             + filtered_read1
             + " "
             + filtered_read2
-            + " results/assembly.fas ./tmp --min-seq-id 0.8 >/dev/null 2>&1"
+            + " " + output_fp + "/assembly.fas ./tmp --min-seq-id 0.8 >/dev/null 2>&1"
         )
         print(datetime.datetime.now(), ": Running PLASS")
         os.system(plass_string)
         print(datetime.datetime.now(), ": PLASS assembly completed")
-        prots_fp = "results/assembly.fas"
+        prots_fp = output_fp + "/assembly.fas"
     elif seq_file_path is not None:
         prots_fp = seq_file_path
     else:
@@ -268,11 +274,11 @@ def annotation_pipeline(
     clusters_fp = ""
     if clust_type == 0:
         # run linclust
-        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " results/clusters ./tmp --min-seq-id 0.9 >/dev/null 2>&1"
+        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " " +output_fp+"/clusters ./tmp --min-seq-id 0.9 >/dev/null 2>&1"
         print(datetime.datetime.now(), ": Running Linclust")
         os.system(linclust_str)
         print(datetime.datetime.now(), ": Protein clustering complete")
-        clusters_fp = "results/clusters_all_seqs.fasta"
+        clusters_fp = output_fp+"/clusters_all_seqs.fasta"
     elif clust_type == 1:
         print(datetime.datetime.now(), ": Running RBiotools Linclust")
         # create csv file of protein sequences to pass in to RBiotools
@@ -280,22 +286,21 @@ def annotation_pipeline(
         # then call R code
         os.system("Rscript get_clusters.r >/dev/null 2>&1")
         # identify mutations in clusters
-        clusters_fp = format_clusters("results/clusters.csv")
+        clusters_fp = format_clusters("tmp/clusters.csv", output_fp)
         print(datetime.datetime.now(), ": Protein clustering complete")
 
     else:
-        print("Error choosing correct version of Linclsut, please try again.")
+        print("Error choosing correct version of Linclust, please try again.")
     
     # isolate clusters with short proteins
     print(datetime.datetime.now(), ": Isolating short proteins")
-    clusters_short_prots = isolate_short_prots(clusters_fp)
+    clusters_short_prots = isolate_short_prots(clusters_fp, output_fp)
     print(datetime.datetime.now(), ": Short protein isolation complete")
-    output_fp = "results/mutations.txt"
+    mutations_output_fp = output_fp+"/mutations.txt"
     print(datetime.datetime.now(), ": Identifying mutations")
-    mutation_id.id_mutations(clusters_short_prots, output_fp, mutation_id_window)
+    mutation_id.id_mutations(clusters_short_prots, mutations_output_fp, mutation_id_window)
     print(datetime.datetime.now(), ": Mutation identification complete")
     # insert ML model steps here
-
     
 def main():
     parser = argparse.ArgumentParser(
@@ -330,7 +335,7 @@ def main():
         help="the file path of the .fasta file of sequences if plass is to be bypassed",
     )
     mutation_id_parser.add_argument(
-        "-o", dest="output_file_path", type=str, help="file path for the output file"
+        "-o", dest="output_file_path", type=str, help="file path for the output directory"
     )
     mutation_id_parser.add_argument(
         "-clust", dest="clust_type", type=int, help="the version of linclust used for clustering. 0 for the original Linclust, 1 for the RBiotools Linclust"
@@ -363,7 +368,7 @@ def main():
         )
     else:
         print("Incorrect input, please check parameters and try again")
-       
-    
+        
 if __name__ == "__main__":
     main()
+    
