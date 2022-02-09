@@ -94,9 +94,11 @@ def isolate_short_prots(clusters_fp, output_fp):
     fragments_fp = output_fp+"/fragments.fasta"
     long_prots_fp = output_fp+"/long_proteins.fasta"
     short_prot_clusters_fp = output_fp+"/clusters_short_prots.fasta"
+    short_prots_fp = output_fp+"/short_prots.fasta"
     fragment_file = open(fragments_fp, "w+")
     long_prots_file = open(long_prots_fp, "w+")
     cluster_file = open(short_prot_clusters_fp, "w+")
+    short_prots = open(short_prots_fp, "w+")
 
     for i in fragments.keys():
         fragment_file.write(i)
@@ -111,10 +113,12 @@ def isolate_short_prots(clusters_fp, output_fp):
             cluster_file.write(i)
             for j in clusters[i]:
                 cluster_file.write(j)
+                short_prots.write(j)
 
     fragment_file.close()
     long_prots_file.close()
     cluster_file.close()
+    short_prots.close()
 
     return short_prot_clusters_fp
 
