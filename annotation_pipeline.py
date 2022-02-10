@@ -9,16 +9,17 @@ def pre_process(read_file_1, read_file_2):
     bbmap_folder = "bbmap/bbmap"
     adapters = bbmap_folder+"/resources/adapters.fa"
     phiX_adapters=bbmap_folder+"/resources/phix174_ill.ref.fa.gz"
-    temp1 = "temp1.fq"
-    temp2 = "temp2.fq"
+    filename1 = (read_file_1.split("/")[-1]).split(".")
+    filename2 = (read_file_2.split("/")[-1]).split(".")
+    temp1 = filename1[0]+"temp1.fq"
+    temp2 = filename2[0]+"temp2.fq"
     
     os.system("mkdir sequencing_reads")
     command1 = "{}/bbduk.sh -Xmx7g in1={} in2={} out1={} out2={} minlen=10 qtrim=rl trimq=20 ktrim=r k=21 mink=11 ref={} hdist=1 threads=2 tbo tpe".format(bbmap_folder, read_file_1, read_file_2, temp1, temp2, adapters)
     os.system(command1)
     
-    filename1 = (read_file_1.split("/")[-1]).split(".")
+    
     output1 = "sequencing_reads/"+filename1[0]+"_filtered.fastq"
-    filename2 = (read_file_2.split("/")[-1]).split(".")
     output2= "sequencing_reads/"+filename2[0]+"_filtered.fastq"
     command2 = "{}/bbduk.sh in1={} in2={} out1={} out2={} ref={} hdist=1 k=21 threads=2".format(bbmap_folder, temp1, temp2, output1, output2, phiX_adapters)
     os.system(command2)
