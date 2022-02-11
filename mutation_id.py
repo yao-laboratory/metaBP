@@ -1,6 +1,6 @@
 import os
 
-def id_mutations(input_fp, output_fp, sim_threshold):
+def id_mutations(input_fp, output_fp, sim_threshold, input_folder):
     # open both files
     inputfile = open(input_fp, "r+")
     outputfile = open(output_fp, "w+")
@@ -29,13 +29,13 @@ def id_mutations(input_fp, output_fp, sim_threshold):
                     cluster.append(next)
                     in_cluster = False
                     clus_no_stars = remove_stars(cluster)
-                    aligned_cluster = align_cluster(clus_no_stars)
+                    aligned_cluster = align_cluster(clus_no_stars, input_folder)
                     find_mutations(clusName, aligned_cluster, sim_threshold, outputfile)
                 elif (len(next_split) == 1) and (next.startswith(">")):
                     in_cluster = False
                     i = i - 1
                     clus_no_stars = remove_stars(cluster)
-                    aligned_cluster = align_cluster(clus_no_stars)
+                    aligned_cluster = align_cluster(clus_no_stars, input_folder)
                     find_mutations(clusName, aligned_cluster, sim_threshold, outputfile)
                 else:
                     cluster.append(next)
@@ -50,16 +50,16 @@ def remove_stars(cluster):
         new_cluster.append(j)
     return new_cluster
 
-def align_cluster(cluster):
+def align_cluster(cluster, input_folder):
     if len(cluster) < 3:
         return cluster
-    cluster_file_path = "./clustalo/cluster.fas"
-    alignment_file_path = "./clustalo/aligned.fas"
+    cluster_file_path = input_folder+"/cluster.fas"
+    alignment_file_path = input_folder+"/aligned.fas"
     temp_cluster_file = open(cluster_file_path, "w+")
     for i in cluster:
         temp_cluster_file.write(i)
     temp_cluster_file.close()
-    os.system("clustalo/clustalo-1.2.4-Ubuntu-x86_64 -i clustalo/cluster.fas -o clustalo/aligned.fas -v >/dev/null 2>&1")
+    os.system("clustalo/clustalo-1.2.4-Ubuntu-x86_64 -i "+input_folder+"/cluster.fas -o "+input_folder+"/aligned.fas -v >/dev/null 2>&1")
     alignment_file = open(alignment_file_path, "r+")
     file_data = []
     
