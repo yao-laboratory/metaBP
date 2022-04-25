@@ -278,7 +278,7 @@ def annotation_pipeline(
     clusters_fp = ""
     if clust_type == 0:
         # run linclust
-        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " " +output_fp+"/clusters ./tmp --min-seq-id 0.9 >/dev/null 2>&1"
+        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " " +output_fp+"/clusters ./tmp --min-seq-id 0.9 --cov-mode 1 -c 0.5 --cluster-mode 2 >/dev/null 2>&1"
         print(datetime.datetime.now(), ": Running Linclust")
         os.system(linclust_str)
         print(datetime.datetime.now(), ": Protein clustering complete")
