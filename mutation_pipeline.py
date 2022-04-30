@@ -237,7 +237,7 @@ def format_clusters(clusters_fp, output_fp):
     new_clus.close()
     return new_clus_fp
 
-def annotation_pipeline(
+def mutation_pipeline(
     read_file_1,
     read_file_2,
     seq_file_path,
@@ -245,11 +245,6 @@ def annotation_pipeline(
     clust_type,
     mutation_id_window=10,
 ):
-    # also add a parameter to choose whether you use eggnog or the new model
-    # only run short proteins through the annotation tools
-    # big csv file as output and then short report file to summarize the results
-    # could add a preprocessing step to clean up the fastq file (there's a tool that can be provided along with the others)
-    # print extra information (date, time, what procedure is running and then the same when it's finished)
     os.system("mkdir tmp")
     os.system("mkdir "+output_fp)
     prots_fp = ""
@@ -362,7 +357,7 @@ def main():
         clust_type = arguments.clust_type
         mutation_id_window = arguments.mutation_id_window
         # call function
-        annotation_pipeline(
+        mutation_pipeline(
             read_file_1,
             read_file_2,
             seq_file_path,
