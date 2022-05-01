@@ -331,10 +331,10 @@ def main():
         "-s",
         dest="seq_file_path",
         type=str,
-        help="the file path of the .fasta file of sequences if plass is to be bypassed",
+        help="the file path of the .fasta file of sequences if plass assembly is to be bypassed",
     )
     mutation_id_parser.add_argument(
-        "-o", dest="output_file_path", type=str, help="file path for the output directory"
+        "-o", dest="output_file_path", type=str, help="the file path for the output directory"
     )
     mutation_id_parser.add_argument(
         "-clust", dest="clust_type", type=int, help="the version of linclust used for clustering. 0 for the original Linclust, 1 for the RBiotools Linclust"
