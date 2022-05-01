@@ -41,7 +41,18 @@ The parameters for the tool are as follows:
 If a file path to a .fasta sequence file is provided using the `-s` flag, PLASS assembly is automatically bypassed.
 
 ## Output Files
+Output files will be located in the directory provided using the `-o` flag. The output files will include the following:
+- assembly.fas: assembled sequences outputed by PLASS
+- clusters_all_seqs.fasta, clusters_cluster.tsv, clusters_rep_seq.fasta: Linclust output files. Clusters contain sequences of all lengths.  
+- short_prots.fasta: sequences filtered to only include short sequences (length <= 100)
+- fragments.fasta: sequences considered to be fragments during the filtering process
+- long_proteins.fasta: sequences longer than 100 amino acids in length which were filtered out
+- clusters_short_prots.fasta: Clusters filtered to only include short sequences (length <= 100)
+- mutations.txt: text file with short protein sequence clusters and mutation information
 
+### Mutation Formatting:
+Within each cluster, mutation information is found using the representative sequence as a reference. 
 
+For instance, if a sequence does not match up at location 45, the representative would be annotated with `45A` (the amino acid in the position) and the mutated sequence will be annotated with the differing amino acid eg: `45I`. 
 
-
+Unmutated sequences (sequences that match the representative sequence) are annotated with the same mutation information as the representative sequence.
