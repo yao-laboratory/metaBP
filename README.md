@@ -27,7 +27,7 @@ The tool can be used with two kinds of input, either sequencing read files (.fas
 
 A sample command using sequencing read files would look something like this:
 ```
- python annotation_pipeline.py call_mutations -i1 readfile_1.fastq -i2 readfile_2.fastq -o metabp_results -clust 0 -mw 10
+ python mutation_pipeline.py call_mutations -i1 readfile_1.fastq -i2 readfile_2.fastq -o metabp_results -clust 0 -mw 10
 ```
 
 The parameters for the tool are as follows:
