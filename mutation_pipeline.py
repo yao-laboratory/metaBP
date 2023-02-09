@@ -14,17 +14,23 @@ def pre_process(read_file_1, read_file_2):
     temp1 = filename1[0]+"temp1.fq"
     temp2 = filename2[0]+"temp2.fq"
     
-    os.system("mkdir sequencing_reads")
-    command1 = "{}/bbduk.sh -Xmx7g in1={} in2={} out1={} out2={} minlen=10 qtrim=rl trimq=20 ktrim=r k=21 mink=11 ref={} hdist=1 threads=2 tbo tpe".format(bbmap_folder, read_file_1, read_file_2, temp1, temp2, adapters)
-    os.system(command1)
-    
-    
     output1 = "sequencing_reads/"+filename1[0]+"_filtered.fastq"
     output2= "sequencing_reads/"+filename2[0]+"_filtered.fastq"
-    command2 = "{}/bbduk.sh in1={} in2={} out1={} out2={} ref={} hdist=1 k=21 threads=2".format(bbmap_folder, temp1, temp2, output1, output2, phiX_adapters)
-    os.system(command2)
+
+    if os.path.exists("sequencing_reads") == False:
+        os.system("mkdir sequencing_reads")
+        
+    if os.path.exists(output1) == False:
+        command1 = "{}/bbduk.sh -Xmx7g in1={} in2={} out1={} out2={} minlen=10 qtrim=rl trimq=20 ktrim=r k=21 mink=11 ref={} hdist=1 threads=2 tbo tpe".format(bbmap_folder, read_file_1, read_file_2, temp1, temp2, adapters)
+        os.system(command1)
+
+
+
+        command2 = "{}/bbduk.sh in1={} in2={} out1={} out2={} ref={} hdist=1 k=21 threads=2".format(bbmap_folder, temp1, temp2, output1, output2, phiX_adapters)
+        os.system(command2)
     
-    os.system("rm "+temp1+" "+temp2)
+    if os.path.exists(temp1) == True:
+        os.system("rm "+temp1+" "+temp2)
     
     return output1, output2
 
@@ -245,8 +251,10 @@ def mutation_pipeline(
     clust_type,
     mutation_id_window=10,
 ):
-    os.system("mkdir tmp")
-    os.system("mkdir "+output_fp)
+    if os.path.exists("tmp") == False:
+        os.system("mkdir tmp")
+    if os.path.exists(output_fp) == False:
+        os.system("mkdir "+output_fp)
     prots_fp = ""
     if (read_file_1 is not None) and (read_file_2 is not None):
         # filter data
@@ -262,6 +270,7 @@ def mutation_pipeline(
             + " " + output_fp + "/assembly.fas ./tmp --min-seq-id 0.8 >/dev/null 2>&1"
         )
         print(datetime.datetime.now(), ": Running PLASS")
+        print(plass_string)
         os.system(plass_string)
         print(datetime.datetime.now(), ": PLASS assembly completed")
         prots_fp = output_fp + "/assembly.fas"
