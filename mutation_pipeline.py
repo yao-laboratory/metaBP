@@ -5,32 +5,30 @@ import numpy as np
 import pandas as pd
 import datetime
 
-def pre_process(read_file_1, read_file_2):
+def pre_process(output_fp, read_file_1, read_file_2):
     bbmap_folder = "bbmap/bbmap"
     adapters = bbmap_folder+"/resources/adapters.fa"
     phiX_adapters=bbmap_folder+"/resources/phix174_ill.ref.fa.gz"
     filename1 = (read_file_1.split("/")[-1]).split(".")
     filename2 = (read_file_2.split("/")[-1]).split(".")
-    temp1 = filename1[0]+"temp1.fq"
-    temp2 = filename2[0]+"temp2.fq"
-    
-    output1 = "sequencing_reads/"+filename1[0]+"_filtered.fastq"
-    output2= "sequencing_reads/"+filename2[0]+"_filtered.fastq"
+    temp1 = output_fp+'/'+filename1[0]+"temp1.fq"
+    temp2 = output_fp+'/'+filename2[0]+"temp2.fq"
 
-    if os.path.exists("sequencing_reads") == False:
-        os.system("mkdir sequencing_reads")
-        
-    if os.path.exists(output1) == False:
+    output1 = output_fp+"/sequencing_reads/"+filename1[0]+"_filtered.fastq"
+    output2= output_fp+"/sequencing_reads/"+filename2[0]+"_filtered.fastq"
+
+    if os.path.exists(output_fp+"/sequencing_reads")==False:
+       os.system("mkdir "+output_fp+"/sequencing_reads")
+
+    if os.path.exists(output1)==False:
         command1 = "{}/bbduk.sh -Xmx7g in1={} in2={} out1={} out2={} minlen=10 qtrim=rl trimq=20 ktrim=r k=21 mink=11 ref={} hdist=1 threads=2 tbo tpe".format(bbmap_folder, read_file_1, read_file_2, temp1, temp2, adapters)
         os.system(command1)
-
-
 
         command2 = "{}/bbduk.sh in1={} in2={} out1={} out2={} ref={} hdist=1 k=21 threads=2".format(bbmap_folder, temp1, temp2, output1, output2, phiX_adapters)
         os.system(command2)
     
-    if os.path.exists(temp1) == True:
-        os.system("rm "+temp1+" "+temp2)
+    if os.path.exists(temp1)==True:
+       os.system("rm "+temp1+" "+temp2)
     
     return output1, output2
 
@@ -176,7 +174,7 @@ def scrub_file_data(file_data):
         sequences.append(consolidated_sequences[i])
     return sequences
 
-def make_prot_df(short_prots_fp):
+def make_prot_df(output_fp, short_prots_fp):
     prot_file = open(short_prots_fp, "r+")
 
     file_data = []
@@ -200,7 +198,7 @@ def make_prot_df(short_prots_fp):
     prot_df["identifier"] = proteins.keys()
     prot_df["protein"] = seqs
 
-    csv_fp = "tmp/sequences.csv"
+    csv_fp = output_fp+"tmp/sequences.csv"
     prot_df.to_csv(csv_fp)
     return csv_fp
 
@@ -251,15 +249,16 @@ def mutation_pipeline(
     clust_type,
     mutation_id_window=10,
 ):
-    if os.path.exists("tmp") == False:
-        os.system("mkdir tmp")
-    if os.path.exists(output_fp) == False:
+    if os.path.exists(output_fp)==False:
         os.system("mkdir "+output_fp)
+    if os.path.exists(output_fp+"/tmp")==False:
+        os.system("mkdir "+output_fp+"/tmp")
+
     prots_fp = ""
     if (read_file_1 is not None) and (read_file_2 is not None):
         # filter data
         print(datetime.datetime.now(), ": Filtering sequencing read data")
-        filtered_read1, filtered_read2 = pre_process(read_file_1, read_file_2)
+        filtered_read1, filtered_read2 = pre_process(output_fp, read_file_1, read_file_2)
         print(datetime.datetime.now(), ": Filtering completed")
         # run plass
         plass_string = (
@@ -267,7 +266,7 @@ def mutation_pipeline(
             + filtered_read1
             + " "
             + filtered_read2
-            + " " + output_fp + "/assembly.fas ./tmp --min-seq-id 0.8 >/dev/null 2>&1"
+            + " " + output_fp + "/assembly.fas "+output_fp+"/tmp --min-seq-id 0.8 >/dev/null 2>&1"
         )
         print(datetime.datetime.now(), ": Running PLASS")
         print(plass_string)
@@ -282,7 +281,7 @@ def mutation_pipeline(
     clusters_fp = ""
     if clust_type == 0:
         # run linclust
-        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " " +output_fp+"/clusters ./tmp --min-seq-id 0.9 --cov-mode 1 -c 0.5 --cluster-mode 2 >/dev/null 2>&1"
+        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " " +output_fp+"/clusters "+output_fp+"/tmp --min-seq-id 0.9 --cov-mode 1 -c 0.5 --cluster-mode 2 >/dev/null 2>&1"
         print(datetime.datetime.now(), ": Running Linclust")
         os.system(linclust_str)
         print(datetime.datetime.now(), ": Protein clustering complete")
@@ -290,11 +289,11 @@ def mutation_pipeline(
     elif clust_type == 1:
         print(datetime.datetime.now(), ": Running RBiotools Linclust")
         # create csv file of protein sequences to pass in to RBiotools
-        seq_csv = make_prot_df(prots_fp)
+        seq_csv = make_prot_df(output_fp, prots_fp)
         # then call R code
         os.system("Rscript get_clusters.r >/dev/null 2>&1")
         # identify mutations in clusters
-        clusters_fp = format_clusters("tmp/clusters.csv", output_fp)
+        clusters_fp = format_clusters(output_fp+"/tmp/clusters.csv", output_fp)
         print(datetime.datetime.now(), ": Protein clustering complete")
 
     else:
@@ -379,4 +378,3 @@ def main():
         
 if __name__ == "__main__":
     main()
-    
