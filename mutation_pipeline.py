@@ -307,6 +307,8 @@ def mutation_pipeline(
     print(datetime.datetime.now(), ": Identifying mutations")
     mutation_id.id_mutations(clusters_short_prots, mutations_output_fp, mutation_id_window, output_fp)
     print(datetime.datetime.now(), ": Mutation identification complete")
+    os.system("rm -r "+output_fp+"/sequencing_reads")
+    os.system("rm -r "+output_fp+"/tmp")
     # insert ML model steps here
     
 def main():
