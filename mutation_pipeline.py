@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import datetime
 
-def pre_process(output_fp, read_file_1, read_file_2):
+def pre_process(output_fp, read_file_1, read_file_2, threads):
     bbmap_folder = "bbmap/bbmap"
     adapters = bbmap_folder+"/resources/adapters.fa"
     phiX_adapters=bbmap_folder+"/resources/phix174_ill.ref.fa.gz"
@@ -21,10 +21,10 @@ def pre_process(output_fp, read_file_1, read_file_2):
        os.system("mkdir "+output_fp+"/sequencing_reads")
 
     if os.path.exists(output1)==False:
-        command1 = "{}/bbduk.sh -Xmx7g in1={} in2={} out1={} out2={} minlen=10 qtrim=rl trimq=20 ktrim=r k=21 mink=11 ref={} hdist=1 threads=2 tbo tpe".format(bbmap_folder, read_file_1, read_file_2, temp1, temp2, adapters)
+        command1 = "{}/bbduk.sh -Xmx7g in1={} in2={} out1={} out2={} minlen=10 qtrim=rl trimq=20 ktrim=r k=21 mink=11 ref={} hdist=1 threads={} tbo tpe".format(bbmap_folder, read_file_1, read_file_2, temp1, temp2, adapters, str(threads))
         os.system(command1)
 
-        command2 = "{}/bbduk.sh in1={} in2={} out1={} out2={} ref={} hdist=1 k=21 threads=2".format(bbmap_folder, temp1, temp2, output1, output2, phiX_adapters)
+        command2 = "{}/bbduk.sh in1={} in2={} out1={} out2={} ref={} hdist=1 k=21 threads={}".format(bbmap_folder, temp1, temp2, output1, output2, phiX_adapters, str(threads))
         os.system(command2)
     
     if os.path.exists(temp1)==True:
@@ -248,6 +248,7 @@ def mutation_pipeline(
     output_fp,
     clust_type,
     mutation_id_window=10,
+    threads=1,
 ):
     if os.path.exists(output_fp)==False:
         os.system("mkdir "+output_fp)
@@ -258,7 +259,7 @@ def mutation_pipeline(
     if (read_file_1 is not None) and (read_file_2 is not None):
         # filter data
         print(datetime.datetime.now(), ": Filtering sequencing read data")
-        filtered_read1, filtered_read2 = pre_process(output_fp, read_file_1, read_file_2)
+        filtered_read1, filtered_read2 = pre_process(output_fp, read_file_1, read_file_2, threads)
         print(datetime.datetime.now(), ": Filtering completed")
         # run plass
         plass_string = (
@@ -266,7 +267,7 @@ def mutation_pipeline(
             + filtered_read1
             + " "
             + filtered_read2
-            + " " + output_fp + "/assembly.fas "+output_fp+"/tmp --min-seq-id 0.8 >/dev/null 2>&1"
+            + " " + output_fp + "/assembly.fas "+output_fp+"/tmp --min-seq-id 0.8 >/dev/null 2>&1 --threads "+str(threads)
         )
         print(datetime.datetime.now(), ": Running PLASS")
         print(plass_string)
@@ -281,7 +282,7 @@ def mutation_pipeline(
     clusters_fp = ""
     if clust_type == 0:
         # run linclust
-        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " " +output_fp+"/clusters "+output_fp+"/tmp --min-seq-id 0.9 --cov-mode 1 -c 0.5 --cluster-mode 2 >/dev/null 2>&1"
+        linclust_str = "mmseqs/bin/mmseqs easy-linclust " +prots_fp+ " " +output_fp+"/clusters "+output_fp+"/tmp --min-seq-id 0.9 --cov-mode 1 -c 0.5 --cluster-mode 2 >/dev/null 2>&1 --threads "+str(threads)
         print(datetime.datetime.now(), ": Running Linclust")
         os.system(linclust_str)
         print(datetime.datetime.now(), ": Protein clustering complete")
@@ -349,12 +350,17 @@ def main():
     mutation_id_parser.add_argument(
         "-clust", dest="clust_type", type=int, help="the version of linclust used for clustering. 0 for the original Linclust, 1 for the RBiotools Linclust"
     )
-    
     mutation_id_parser.add_argument(
         "-mw",
         dest="mutation_id_window",
         type=int,
         help="the window on either side of a detected mutation within which to check that the similarity threshold (90%) is met. Default=10",
+    )
+    mutation_id_parser.add_argument(
+        "-t",
+        dest="threads",
+        type=int,
+        help="the number of threads used in plass and mmseq commands",
     )
 
     arguments = parser.parse_args()
@@ -366,6 +372,7 @@ def main():
         output_file_path = arguments.output_file_path
         clust_type = arguments.clust_type
         mutation_id_window = arguments.mutation_id_window
+        threads = arguments.threads
         # call function
         mutation_pipeline(
             read_file_1,
@@ -374,6 +381,7 @@ def main():
             output_file_path,
             clust_type,
             mutation_id_window,
+            threads,
         )
     else:
         print("Incorrect input, please check parameters and try again")
