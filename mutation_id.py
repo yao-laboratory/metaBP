@@ -80,7 +80,7 @@ def get_aligned_sequences(file_data):
         i_data = file_data[i].split(" ")
         i_next = file_data[i + 1].split(" ")
         if i == (len(file_data) - 2):
-            k = i_data[0].replace("\n", "")
+            k = file_data[i].replace("\n", "")
             scrubbed_file_data.append(k)
             scrubbed_file_data.append(file_data[i + 1])
         elif ((len(i_data) == 1) and (len(i_next) == 1)) and (i_next[0].startswith(">") == False):
