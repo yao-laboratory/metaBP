@@ -1,4 +1,5 @@
 import os
+import re
 
 def id_mutations(input_fp, output_fp, sim_threshold, input_folder):
     # open both files
@@ -165,7 +166,7 @@ def find_mutations(clusName, cluster, sim_threshold, outputfile):
                         if (main_list[x] != "\n") and (seq_list[x] != "\n"):
                             mutation_info += "" + str(x + 1) + seq_list[x] + ","
                             main_seq_information.add(
-                                "" + str(x + 1) + main_seq[x] + ","
+                                "" + str(x + 1) + main_seq[x]
                             )
             additional_info += mutation_info
         mutations.append(additional_info[:-1])
@@ -175,11 +176,11 @@ def find_mutations(clusName, cluster, sim_threshold, outputfile):
     main_seq_info = main_seq_info.replace("\n", "")
     main_seq_info += " "
     main_seq_information = list(main_seq_information)
-    main_seq_information.sort()
-    main_seq_mutations = ""
-    for i in main_seq_information:
-        main_seq_info += i
-        main_seq_mutations += i
+    main_seq_information = format_mutations(main_seq_information)
+    # main_seq_mutations = ""
+    # for i in main_seq_information:
+    main_seq_info += main_seq_information
+    main_seq_mutations = main_seq_information
     main_seq_info += "\n"
     outputfile.write(main_seq_info)
     outputfile.write(main_seq)
@@ -191,7 +192,7 @@ def find_mutations(clusName, cluster, sim_threshold, outputfile):
         outputfile.write(new_info)
         outputfile.write(sequences[j])
         new_info = ""
-        
+     
 def check_mutation_window(main_list, seq_list, sim_threshold, loop_range, x):
     left_check = False
     right_check = False
@@ -238,3 +239,8 @@ def check_mutation_window(main_list, seq_list, sim_threshold, loop_range, x):
         right_check = True
     return [left_check, right_check]
 
+def format_mutations(list_of_mutations):
+    convert = lambda text: int(text) if text.isdigit() else text 
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
+    sorted_list = sorted(list_of_mutations, key = alphanum_key)[1:]
+    return ','.join(sorted_list)
