@@ -151,13 +151,20 @@ def find_mutations(clusName, cluster, sim_threshold, outputfile):
             seq_list = list(i)
             mutation_info = ""
             loop_range = 0
-            if len(main_list) < len(seq_list):
-                loop_range = len(main_list)
+            main_list_end = len(main_list) - number_of_ending_dashes(main_list) - 1
+            seq_list_end = len(seq_list) - number_of_ending_dashes(seq_list) - 1
+            if main_list_end < seq_list_end:
+                loop_range = main_list_end
             else:
-                loop_range = len(seq_list)
-            for x in range(loop_range):
+                loop_range = seq_list_end
+            start_range = 0
+            if number_of_starting_dashes(seq_list) >= number_of_starting_dashes(main_list):
+                start_range = number_of_starting_dashes(seq_list)
+            else:
+                start_range = number_of_starting_dashes(main_list)
+            for x in range(start_range, loop_range):
                 check_list = check_mutation_window(
-                    main_list, seq_list, sim_threshold, loop_range, x
+                    main_list, seq_list, sim_threshold, start_range, loop_range, x
                 )
                 check_left = check_list[0]
                 check_right = check_list[1]
@@ -177,8 +184,6 @@ def find_mutations(clusName, cluster, sim_threshold, outputfile):
     main_seq_info += " "
     main_seq_information = list(main_seq_information)
     main_seq_information = format_mutations(main_seq_information)
-    # main_seq_mutations = ""
-    # for i in main_seq_information:
     main_seq_info += main_seq_information
     main_seq_mutations = main_seq_information
     main_seq_info += "\n"
@@ -192,20 +197,34 @@ def find_mutations(clusName, cluster, sim_threshold, outputfile):
         outputfile.write(new_info)
         outputfile.write(sequences[j])
         new_info = ""
-     
-def check_mutation_window(main_list, seq_list, sim_threshold, loop_range, x):
+
+def number_of_starting_dashes(sequence):
+    dash_counter = 0;
+    while(sequence[dash_counter] == "-"):
+        dash_counter += 1
+    return dash_counter
+
+def number_of_ending_dashes(sequence):
+    dash_counter = 0;
+    index = -2
+    while(sequence[index] == "-"):
+        dash_counter += 1
+        index -= 1
+    return dash_counter
+
+def check_mutation_window(main_list, seq_list, sim_threshold, start_range, loop_range, x):
     left_check = False
     right_check = False
     left_match = []
     right_match = []
     # in range on the left
-    if x == 0:
+    if x == start_range:
         left_check = True
-        num_loop = 0
-    elif x - sim_threshold > -1:
+        num_loop = start_range
+    elif x - sim_threshold > start_range - 1:
         num_loop = sim_threshold + 1
     else:
-        num_loop = sim_threshold - x
+        num_loop = start_range + x + 1
     for i in range(2, num_loop):
         if main_list[x - i] == seq_list[x - i]:
             left_match.append(True)
