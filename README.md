@@ -1,4 +1,6 @@
-# metaBP Mutation Pipeline
+# metaBP Pipeline
+
+This is a metagenomic based bacterial peptides (short open reading frames) discovery pipeline and mutation analysis toolkit.
 
 ## Set-Up
 
@@ -59,3 +61,7 @@ Within each cluster, mutation information is found using the representative sequ
 For instance, if a sequence does not match up at location 45, the representative would be annotated with `45A` (the amino acid in the position) and the mutated sequence will be annotated with the differing amino acid eg: `45I`. 
 
 Unmutated sequences (sequences that match the representative sequence) are annotated with the same mutation information as the representative sequence.
+
+## Citation
+
+Vajjala M, Johnson B, Kasparek L, Leuze M and Yao Q (2022) Profiling a Community-Specific Function Landscape for Bacterial Peptides Through Protein-Level Meta-Assembly and Machine Learning. Front. Genet. 13:935351. doi: 10.3389/fgene.2022.935351
